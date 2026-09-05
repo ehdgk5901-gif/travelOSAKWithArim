@@ -26,6 +26,8 @@ jobs:
 
       - name: Pages 설정
         uses: actions/configure-pages@v5
+        with:
+          enablement: true      # 저장소에 Pages 가 꺼져 있으면 자동으로 켜줌
 
       - name: 사이트 파일 업로드
         uses: actions/upload-pages-artifact@v3
