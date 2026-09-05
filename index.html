@@ -44,6 +44,8 @@
 }
 @supports (color: oklch(0.7 0.1 75)){ :root{ --amber:oklch(0.72 0.14 75); --teal:oklch(0.55 0.11 190); } }
 *{box-sizing:border-box}
+/* display 를 지정한 규칙이 브라우저 기본 [hidden] 을 덮어쓰지 않도록 */
+[hidden]{display:none!important}
 html,body{margin:0;padding:0;background:var(--bg)}
 body{font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;color:var(--ink);line-height:1.55;
   -webkit-font-smoothing:antialiased;overflow-x:hidden}
