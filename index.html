@@ -640,7 +640,9 @@ footer{padding:22px 16px calc(var(--dock) + 26px + var(--sb));text-align:center;
   <button id="btnMusic" aria-pressed="false"><span class="eq"><i></i><i></i><i></i></span><span id="musicTxt">음악</span></button>
 </nav>
 
-<audio id="bgm" src="audio/bgm.mp3" loop preload="none"></audio>
+<audio id="bgm" loop preload="none" playsinline>
+  <source src="audio/bgm.mp3?v=3" type="audio/mpeg">
+</audio>
 
 <!-- 인트로 -->
 <div class="intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
@@ -1207,12 +1209,25 @@ function setMusicUI(on){
   $('tglMusic').setAttribute('aria-checked',on?'true':'false');
 }
 function targetVol(){ return (parseInt($('vol').value,10)||40)/100; }
+var startedAt=0;
 function setMusic(on,remember){
   setMusicUI(on);
   if(on){
+    startedAt=Date.now();
+    /* 0에서 서서히 올리면 "안 들린다"는 오해가 생겨서 절반부터 시작 */
+    try{ A.volume=Math.min(1,targetVol()*0.55); }catch(e){}
     var p=A.play();
-    if(p&&p.catch)p.catch(function(){ setMusicUI(false); armAutoStart(); });
-    fadeTo(targetVol(),900);
+    if(p&&p.then){
+      p.then(function(){
+        fadeTo(targetVol(),700);
+        /* 재생됐는지 실제로 확인 */
+        setTimeout(function(){
+          if(A.paused){ setMusicUI(false); armAutoStart(); }
+        },600);
+      }).catch(function(){ setMusicUI(false); armAutoStart(); });
+    }else{
+      fadeTo(targetVol(),700);
+    }
   }else fadeTo(0,450,function(){A.pause()});
   if(remember!==false){try{localStorage.setItem('okt-music',on?'1':'0')}catch(e){}}
 }
@@ -1221,6 +1236,8 @@ $('btnMusic').onclick=function(){
   setMusic(!$('btnMusic').classList.contains('on'));
 };
 document.addEventListener('visibilitychange',function(){
+  /* 막 시작한 직후엔 건드리지 않음 (외부 브라우저 전환 등으로 바로 멈추는 것 방지) */
+  if(Date.now()-startedAt<1500)return;
   if(document.hidden&&!A.paused)fadeTo(0,300,function(){A.pause()});
   else if(!document.hidden&&$('btnMusic').classList.contains('on')&&A.paused){A.play();fadeTo(targetVol(),700)}
 });
@@ -1297,14 +1314,20 @@ if(inApp){
 }
 
 /* ── 인트로 (항상 표시) ── */
-$('introGo').onclick=function(){
-  /* 인앱이면 확인 누를 때 기본 브라우저로 넘김 */
-  if(inApp&&openExternal())return;
+function enterSite(){
   $('intro').hidden=true;
   document.body.style.overflow='';
   /* 이 클릭이 "사용자 제스처"라 이 순간부터 음악 재생이 허용됨 */
   var pref=null;try{pref=localStorage.getItem('okt-music')}catch(e){}
   if(pref!=='0'){disarmAutoStart();setMusic(true,false)}
+}
+$('introGo').onclick=function(){
+  if(inApp&&openExternal()){
+    /* 외부 브라우저 전환이 실패해 그대로 남아 있으면 여기서 그냥 진입 */
+    setTimeout(function(){ if(!$('intro').hidden)enterSite(); },1200);
+    return;
+  }
+  enterSite();
 };
 
 (function(){
