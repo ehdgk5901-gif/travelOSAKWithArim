@@ -651,7 +651,12 @@ footer{padding:22px 16px calc(var(--dock) + 26px + var(--sb));text-align:center;
         <span>지도와 정보를 나란히 볼 수 있어서 <b>휴대폰보다 데스크톱 화면이 보기 편해요.</b> 여유가 되면 큰 화면으로 봐주세요.</span>
       </div>
     </div>
+    <div class="note" id="inappNote" hidden style="margin:0 24px 4px">
+      <span>📱</span>
+      <span id="inappMsg"></span>
+    </div>
     <div class="btns">
+      <button class="alt" id="introOpen" hidden>기본 브라우저로 열기</button>
       <button class="go" id="introGo">여행 계획 보러 가기</button>
     </div>
   </div>
@@ -1204,8 +1209,42 @@ $('vol').oninput=function(){
 };
 $('btnReset').onclick=function(){ closePanel(); setDay(0); };
 
+/* ── 인앱 브라우저(카톡 등) → 기본 브라우저로 탈출 ── */
+var UA=navigator.userAgent||'';
+var isKakao=/KAKAOTALK/i.test(UA);
+var isAndroid=/Android/i.test(UA);
+var isIOS=/iPhone|iPad|iPod/i.test(UA);
+var inApp=isKakao||/Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER\(inapp|DaumApps|everytimeApp|KAKAOSTORY/i.test(UA);
+
+function openExternal(){
+  var url=location.href;
+  if(isKakao){                       // 카카오톡 전용 스킴 (안드로이드·아이폰 모두 동작)
+    location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(url);
+    return true;
+  }
+  if(isAndroid){                     // 그 외 안드로이드 인앱 → 크롬으로
+    location.href='intent://'+url.replace(/^https?:\/\//,'')+
+      '#Intent;scheme=https;package=com.android.chrome;end';
+    return true;
+  }
+  return false;                      // 아이폰의 카톡 외 인앱은 방법이 없어 안내만
+}
+
+if(inApp){
+  $('inappNote').hidden=false;
+  $('inappMsg').innerHTML = (isKakao||isAndroid)
+    ? '지금 <b>앱 안의 브라우저</b>로 보고 있어요. 지도와 음악이 제대로 안 될 수 있어서 <b>기본 브라우저로 열어드릴게요.</b>'
+    : '지금 <b>앱 안의 브라우저</b>라 일부 기능이 제한될 수 있어요. 오른쪽 아래 <b>⋯ → 다른 브라우저로 열기</b>를 눌러주세요.';
+  if(isKakao||isAndroid){
+    $('introOpen').hidden=false;
+    $('introOpen').onclick=function(){openExternal()};
+  }
+}
+
 /* ── 인트로 (항상 표시) ── */
 $('introGo').onclick=function(){
+  /* 인앱이면 확인 누를 때 기본 브라우저로 넘김 */
+  if(inApp&&openExternal())return;
   $('intro').hidden=true;
   document.body.style.overflow='';
   /* 이 클릭이 "사용자 제스처"라 이 순간부터 음악 재생이 허용됨 */
